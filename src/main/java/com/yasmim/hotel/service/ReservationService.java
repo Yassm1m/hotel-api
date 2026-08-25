@@ -32,20 +32,25 @@ public class ReservationService {
 
         Customer customer = customerRepository.findById(dto.getCustomerId())
                 .orElseThrow(() -> {
-                    log.warn("Customer com id {} n\u00e3o encontrado ao abrir reserva", dto.getCustomerId());
-                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "Customer n\u00e3o encontrado");
+                    log.warn("Customer com id {} não encontrado ao abrir reserva", dto.getCustomerId());
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "Customer não encontrado");
                 });
 
         Room room = roomRepository.findById(dto.getRoomId())
                 .orElseThrow(() -> {
-                    log.warn("Room com id {} n\u00e3o encontrado ao abrir reserva", dto.getRoomId());
-                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "Room n\u00e3o encontrado");
+                    log.warn("Room com id {} não encontrado ao abrir reserva", dto.getRoomId());
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "Room não encontrado");
                 });
 
-        boolean roomOccupied = reservationRepository.findByRoomIdAndStatus(room.getId(), ReservationStatus.IN_USE).isPresent();
-        if (roomOccupied) {
-            log.warn("Tentativa de reservar room id {} que j\u00e1 est\u00e1 ocupado", room.getId());
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Room j\u00e1 est\u00e1 ocupado no momento");
+        List<Reservation> activeReservations = reservationRepository.findByRoomIdAndStatusIn(
+                room.getId(), List.of(ReservationStatus.OPEN, ReservationStatus.IN_USE));
+
+        boolean hasConflict = activeReservations.stream()
+                .anyMatch(r -> dto.getCheckIn().isBefore(r.getCheckOut()) && dto.getCheckOut().isAfter(r.getCheckIn()));
+
+        if (hasConflict) {
+            log.warn("Tentativa de reservar room id {} com conflito de datas ({} a {})", room.getId(), dto.getCheckIn(), dto.getCheckOut());
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Room já possui reserva no período informado");
         }
 
         Reservation reservation = Reservation.builder()
@@ -66,8 +71,8 @@ public class ReservationService {
         Reservation reservation = getReservationOrThrow(id);
 
         if (reservation.getStatus() == ReservationStatus.FINISHED || reservation.getStatus() == ReservationStatus.CANCELLED) {
-            log.warn("Reserva id {} j\u00e1 estava encerrada com status {}", id, reservation.getStatus());
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Reserva j\u00e1 est\u00e1 encerrada");
+            log.warn("Reserva id {} já estava encerrada com status {}", id, reservation.getStatus());
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Reserva já está encerrada");
         }
 
         reservation.setStatus(ReservationStatus.FINISHED);
@@ -97,8 +102,8 @@ public class ReservationService {
     private Reservation getReservationOrThrow(Long id) {
         return reservationRepository.findById(id)
                 .orElseThrow(() -> {
-                    log.warn("Reserva com id {} n\u00e3o encontrada", id);
-                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "Reserva n\u00e3o encontrada");
+                    log.warn("Reserva com id {} não encontrada", id);
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "Reserva não encontrada");
                 });
     }
 
