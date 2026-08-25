@@ -3,6 +3,7 @@ package com.yasmim.hotel.controller;
 import com.yasmim.hotel.dto.CustomerRequestDTO;
 import com.yasmim.hotel.dto.CustomerResponseDTO;
 import com.yasmim.hotel.service.CustomerService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -32,14 +33,14 @@ public class CustomerController {
     }
 
     @PostMapping
-    public ResponseEntity<CustomerResponseDTO> create(@RequestBody CustomerRequestDTO dto) {
+    public ResponseEntity<CustomerResponseDTO> create(@Valid @RequestBody CustomerRequestDTO dto) {
         log.info("POST /api/customers");
         CustomerResponseDTO created = customerService.create(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<CustomerResponseDTO> update(@PathVariable Long id, @RequestBody CustomerRequestDTO dto) {
+    public ResponseEntity<CustomerResponseDTO> update(@PathVariable Long id, @Valid @RequestBody CustomerRequestDTO dto) {
         log.info("PUT /api/customers/{}", id);
         return ResponseEntity.ok(customerService.update(id, dto));
     }
